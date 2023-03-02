@@ -11,9 +11,9 @@
 
 [package]
 edition = "2018"
-rust-version = "1.57.0"
+rust-version = "1.60.0"
 name = "bindgen-cli"
-version = "0.63.0"
+version = "0.64.0"
 authors = ["The rust-bindgen project contributors"]
 description = "Automatically generates Rust FFI bindings to C and C++ libraries."
 homepage = "https://rust-lang.github.io/rust-bindgen/"
@@ -36,10 +36,15 @@ name = "bindgen"
 path = "main.rs"
 
 [dependencies.bindgen]
-version = "=0.63.0"
+version = "=0.64.0"
+features = [
+    "cli",
+    "experimental",
+]
 
 [dependencies.clap]
-version = "3"
+version = "4"
+features = ["derive"]
 
 [dependencies.env_logger]
 version = "0.9.0"
