@@ -22,7 +22,7 @@ rust_binary_host {
     name: "bindgen",
     crate_name: "bindgen",
     cargo_env_compat: true,
-    cargo_pkg_version: "0.64.0",
+    cargo_pkg_version: "0.65.1",
     srcs: ["main.rs"],
     edition: "2018",
     features: [
