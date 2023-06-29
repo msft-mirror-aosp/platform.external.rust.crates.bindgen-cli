@@ -1,8 +1,8 @@
 use bindgen::callbacks::TypeKind;
 use bindgen::{
     builder, AliasVariation, Builder, CodegenConfig, EnumVariation,
-    MacroTypeVariation, NonCopyUnionStyle, RegexSet, RustTarget,
-    DEFAULT_ANON_FIELDS_PREFIX, RUST_TARGET_STRINGS,
+    FieldVisibilityKind, Formatter, MacroTypeVariation, NonCopyUnionStyle,
+    RegexSet, RustTarget, DEFAULT_ANON_FIELDS_PREFIX, RUST_TARGET_STRINGS,
 };
 use clap::Parser;
 use std::fs::File;
@@ -54,22 +54,22 @@ struct BindgenCommand {
     /// The default style of code used to generate enums.
     #[arg(long, value_name = "VARIANT")]
     default_enum_style: Option<EnumVariation>,
-    /// Mark any enum whose name matches <REGEX> as a set of bitfield flags.
+    /// Mark any enum whose name matches REGEX as a set of bitfield flags.
     #[arg(long, value_name = "REGEX")]
     bitfield_enum: Vec<String>,
-    /// Mark any enum whose name matches <REGEX> as a newtype.
+    /// Mark any enum whose name matches REGEX as a newtype.
     #[arg(long, value_name = "REGEX")]
     newtype_enum: Vec<String>,
-    /// Mark any enum whose name matches <REGEX> as a global newtype.
+    /// Mark any enum whose name matches REGEX as a global newtype.
     #[arg(long, value_name = "REGEX")]
     newtype_global_enum: Vec<String>,
-    /// Mark any enum whose name matches <REGEX> as a Rust enum.
+    /// Mark any enum whose name matches REGEX as a Rust enum.
     #[arg(long, value_name = "REGEX")]
     rustified_enum: Vec<String>,
-    /// Mark any enum whose name matches <REGEX> as a series of constants.
+    /// Mark any enum whose name matches REGEX as a series of constants.
     #[arg(long, value_name = "REGEX")]
     constified_enum: Vec<String>,
-    /// Mark any enum whose name matches <regex> as a module of constants.
+    /// Mark any enum whose name matches REGEX as a module of constants.
     #[arg(long, value_name = "REGEX")]
     constified_enum_module: Vec<String>,
     /// The default signed/unsigned type for C macro constants.
@@ -78,34 +78,34 @@ struct BindgenCommand {
     /// The default style of code used to generate typedefs.
     #[arg(long, value_name = "VARIANT")]
     default_alias_style: Option<AliasVariation>,
-    /// Mark any typedef alias whose name matches <REGEX> to use normal type aliasing.
+    /// Mark any typedef alias whose name matches REGEX to use normal type aliasing.
     #[arg(long, value_name = "REGEX")]
     normal_alias: Vec<String>,
-    /// Mark any typedef alias whose name matches <REGEX> to have a new type generated for it.
+    /// Mark any typedef alias whose name matches REGEX to have a new type generated for it.
     #[arg(long, value_name = "REGEX")]
     new_type_alias: Vec<String>,
-    /// Mark any typedef alias whose name matches <REGEX> to have a new type with Deref and DerefMut to the inner type.
+    /// Mark any typedef alias whose name matches REGEX to have a new type with Deref and DerefMut to the inner type.
     #[arg(long, value_name = "REGEX")]
     new_type_alias_deref: Vec<String>,
     /// The default style of code used to generate unions with non-Copy members. Note that ManuallyDrop was first stabilized in Rust 1.20.0.
     #[arg(long, value_name = "STYLE")]
     default_non_copy_union_style: Option<NonCopyUnionStyle>,
-    /// Mark any union whose name matches <REGEX> and who has a non-Copy member to use a bindgen-generated wrapper for fields.
+    /// Mark any union whose name matches REGEX and who has a non-Copy member to use a bindgen-generated wrapper for fields.
     #[arg(long, value_name = "REGEX")]
     bindgen_wrapper_union: Vec<String>,
-    /// Mark any union whose name matches <REGEX> and who has a non-Copy member to use ManuallyDrop (stabilized in Rust 1.20.0) for fields.
+    /// Mark any union whose name matches REGEX and who has a non-Copy member to use ManuallyDrop (stabilized in Rust 1.20.0) for fields.
     #[arg(long, value_name = "REGEX")]
     manually_drop_union: Vec<String>,
-    /// Mark <TYPE> as hidden.
+    /// Mark TYPE as hidden.
     #[arg(long, value_name = "TYPE")]
     blocklist_type: Vec<String>,
-    /// Mark <FUNCTION> as hidden.
+    /// Mark FUNCTION as hidden.
     #[arg(long, value_name = "FUNCTION")]
     blocklist_function: Vec<String>,
-    /// Mark <ITEM> as hidden.
+    /// Mark ITEM as hidden.
     #[arg(long, value_name = "ITEM")]
     blocklist_item: Vec<String>,
-    /// Mark <FILE> as hidden.
+    /// Mark FILE as hidden.
     #[arg(long, value_name = "FILE")]
     blocklist_file: Vec<String>,
     /// Avoid generating layout tests for any type.
@@ -129,7 +129,7 @@ struct BindgenCommand {
     /// Derive Default on any type.
     #[arg(long)]
     with_derive_default: bool,
-    /// Derive Hash on any type.docstring
+    /// Derive Hash on any type.
     #[arg(long)]
     with_derive_hash: bool,
     /// Derive PartialEq on any type.
@@ -144,7 +144,7 @@ struct BindgenCommand {
     /// Derive Ord on any type.
     #[arg(long)]
     with_derive_ord: bool,
-    /// Avoid including doc comments in the output, see: https://github.com/rust-lang/rust-bindgen/issues/426
+    /// Avoid including doc comments in the output, see: <https://github.com/rust-lang/rust-bindgen/issues/426>
     #[arg(long)]
     no_doc_comments: bool,
     /// Disable allowlisting types recursively. This will cause bindgen to emit Rust code that won't compile! See the `bindgen::Builder::allowlist_recursively` method's documentation for details.
@@ -198,7 +198,7 @@ struct BindgenCommand {
     /// Suppress insertion of bindgen's version identifier into generated bindings.
     #[arg(long)]
     disable_header_comment: bool,
-    /// Do not generate bindings for functions or methods. This is useful when you only care about struct layouts.docstring
+    /// Do not generate bindings for functions or methods. This is useful when you only care about struct layouts.
     #[arg(long)]
     ignore_functions: bool,
     /// Generate only given items, split by commas. Valid values are `functions`,`types`, `vars`, `methods`, `constructors` and `destructors`.
@@ -219,10 +219,10 @@ struct BindgenCommand {
     /// Try to fit macro constants into types smaller than u32/i32
     #[arg(long)]
     fit_macro_constant_types: bool,
-    /// Mark <TYPE> as opaque.
+    /// Mark TYPE as opaque.
     #[arg(long, value_name = "TYPE")]
     opaque_type: Vec<String>,
-    ///  Write Rust bindings to <OUTPUT>.
+    ///  Write Rust bindings to OUTPUT.
     #[arg(long, short, value_name = "OUTPUT")]
     output: Option<String>,
     /// Add a raw line of Rust code at the beginning of output.
@@ -239,22 +239,19 @@ struct BindgenCommand {
     /// Conservatively generate inline namespaces to avoid name conflicts.
     #[arg(long)]
     conservative_inline_namespaces: bool,
-    /// MSVC C++ ABI mangling. DEPRECATED: Has no effect.
-    #[arg(long)]
-    use_msvc_mangling: bool,
-    /// Allowlist all the free-standing functions matching <REGEX>. Other non-allowlisted functions will not be generated.
+    /// Allowlist all the free-standing functions matching REGEX. Other non-allowlisted functions will not be generated.
     #[arg(long, value_name = "REGEX")]
     allowlist_function: Vec<String>,
     /// Generate inline functions.
     #[arg(long)]
     generate_inline_functions: bool,
-    /// Only generate types matching <REGEX>. Other non-allowlisted types will not be generated.
+    /// Only generate types matching REGEX. Other non-allowlisted types will not be generated.
     #[arg(long, value_name = "REGEX")]
     allowlist_type: Vec<String>,
-    /// Allowlist all the free-standing variables matching <REGEX>. Other non-allowlisted variables will not be generated.
+    /// Allowlist all the free-standing variables matching REGEX. Other non-allowlisted variables will not be generated.
     #[arg(long, value_name = "REGEX")]
     allowlist_var: Vec<String>,
-    /// Allowlist all contents of <PATH>.
+    /// Allowlist all contents of PATH.
     #[arg(long, value_name = "PATH")]
     allowlist_file: Vec<String>,
     /// Print verbose error messages.
@@ -266,40 +263,42 @@ struct BindgenCommand {
     /// Do not record matching items in the regex sets. This disables reporting of unused items.
     #[arg(long)]
     no_record_matches: bool,
-    /// Ignored - this is enabled by default.
-    #[arg(long = "size_t-is-usize")]
-    size_t_is_usize: bool,
     /// Do not bind size_t as usize (useful on platforms where those types are incompatible).
     #[arg(long = "no-size_t-is-usize")]
     no_size_t_is_usize: bool,
-    /// Do not format the generated bindings with rustfmt.
+    /// Do not format the generated bindings with rustfmt. This option is deprecated, please use
+    /// `--formatter=none` instead.
     #[arg(long)]
     no_rustfmt_bindings: bool,
-    /// Format the generated bindings with rustfmt. DEPRECATED: --rustfmt-bindings is now enabled by default. Disable with --no-rustfmt-bindings.
-    #[arg(long)]
-    rustfmt_bindings: bool,
-    /// The absolute path to the rustfmt configuration file. The configuration file will be used for formatting the bindings. This parameter is incompatible with --no-rustfmt-bindings.
-    #[arg(long, value_name = "PATH")]
+    /// Which tool should be used to format the bindings
+    #[arg(
+        long,
+        value_name = "FORMATTER",
+        conflicts_with = "no_rustfmt_bindings"
+    )]
+    formatter: Option<Formatter>,
+    /// The absolute path to the rustfmt configuration file. The configuration file will be used for formatting the bindings. This parameter sets `formatter` to `rustfmt`.
+    #[arg(long, value_name = "PATH", conflicts_with = "no_rustfmt_bindings")]
     rustfmt_configuration_file: Option<String>,
-    /// Avoid deriving PartialEq for types matching <REGEX>.
+    /// Avoid deriving PartialEq for types matching REGEX.
     #[arg(long, value_name = "REGEX")]
     no_partialeq: Vec<String>,
-    /// Avoid deriving Copy for types matching <REGEX>.
+    /// Avoid deriving Copy and Clone for types matching REGEX.
     #[arg(long, value_name = "REGEX")]
     no_copy: Vec<String>,
-    /// Avoid deriving Debug for types matching <REGEX>.
+    /// Avoid deriving Debug for types matching REGEX.
     #[arg(long, value_name = "REGEX")]
     no_debug: Vec<String>,
-    /// Avoid deriving/implementing Default for types matching <REGEX>.
+    /// Avoid deriving/implementing Default for types matching REGEX.
     #[arg(long, value_name = "REGEX")]
     no_default: Vec<String>,
-    /// Avoid deriving Hash for types matching <REGEX>.
+    /// Avoid deriving Hash for types matching REGEX.
     #[arg(long, value_name = "REGEX")]
     no_hash: Vec<String>,
-    /// Add #[must_use] annotation to types matching <REGEX>.
+    /// Add `#[must_use]` annotation to types matching REGEX.
     #[arg(long, value_name = "REGEX")]
     must_use_type: Vec<String>,
-    /// Enables detecting unexposed attributes in functions (slow). Used to generate #[must_use] annotations.
+    /// Enables detecting unexposed attributes in functions (slow). Used to generate `#[must_use]` annotations.
     #[arg(long)]
     enable_function_attribute_detection: bool,
     /// Use `*const [T; size]` instead of `*const T` for C arrays
@@ -314,6 +313,9 @@ struct BindgenCommand {
     /// Require successful linkage to all functions in the library.
     #[arg(long)]
     dynamic_link_require_all: bool,
+    /// Prefix the name of exported symbols.
+    #[arg(long)]
+    prefix_link_name: Option<String>,
     /// Makes generated bindings `pub` only for items if the items are publically accessible in C++.
     #[arg(long)]
     respect_cxx_access_specs: bool,
@@ -335,22 +337,22 @@ struct BindgenCommand {
     /// Deduplicates extern blocks.
     #[arg(long)]
     merge_extern_blocks: bool,
-    /// Overrides the ABI of functions matching <regex>. The <OVERRIDE> value must be of the shape <REGEX>=<ABI> where <ABI> can be one of C, stdcall, fastcall, thiscall, aapcs, win64 or C-unwind.
+    /// Overrides the ABI of functions matching REGEX. The OVERRIDE value must be of the shape REGEX=ABI where ABI can be one of C, stdcall, efiapi, fastcall, thiscall, aapcs, win64 or C-unwind.
     #[arg(long, value_name = "OVERRIDE")]
     override_abi: Vec<String>,
     /// Wrap unsafe operations in unsafe blocks.
     #[arg(long)]
     wrap_unsafe_ops: bool,
-    /// Derive custom traits on any kind of type. The <CUSTOM> value must be of the shape <REGEX>=<DERIVE> where <DERIVE> is a coma-separated list of derive macros.
+    /// Derive custom traits on any kind of type. The CUSTOM value must be of the shape REGEX=DERIVE where DERIVE is a coma-separated list of derive macros.
     #[arg(long, value_name = "CUSTOM")]
     with_derive_custom: Vec<String>,
-    /// Derive custom traits on a `struct`. The <CUSTOM> value must be of the shape <REGEX>=<DERIVE> where <DERIVE> is a coma-separated list of derive macros.
+    /// Derive custom traits on a `struct`. The CUSTOM value must be of the shape REGEX=DERIVE where DERIVE is a coma-separated list of derive macros.
     #[arg(long, value_name = "CUSTOM")]
     with_derive_custom_struct: Vec<String>,
-    /// Derive custom traits on an `enum. The <CUSTOM> value must be of the shape <REGEX>=<DERIVE> where <DERIVE> is a coma-separated list of derive macros.
+    /// Derive custom traits on an `enum. The CUSTOM value must be of the shape REGEX=DERIVE where DERIVE is a coma-separated list of derive macros.
     #[arg(long, value_name = "CUSTOM")]
     with_derive_custom_enum: Vec<String>,
-    /// Derive custom traits on a `union`. The <CUSTOM> value must be of the shape <REGEX>=<DERIVE> where <DERIVE> is a coma-separated list of derive macros.
+    /// Derive custom traits on a `union`. The CUSTOM value must be of the shape REGEX=DERIVE where DERIVE is a coma-separated list of derive macros.
     #[arg(long, value_name = "CUSTOM")]
     with_derive_custom_union: Vec<String>,
     /// Generate wrappers for `static` and `static inline` functions.
@@ -364,6 +366,13 @@ struct BindgenCommand {
     /// inline` functions.
     #[arg(long, requires = "experimental", value_name = "SUFFIX")]
     wrap_static_fns_suffix: Option<String>,
+    /// Set the default visibility of fields, including bitfields and accessor methods for
+    /// bitfields. This flag is ignored if the `--respect-cxx-access-specs` flag is used.
+    #[arg(long, value_name = "VISIBILITY")]
+    default_visibility: Option<FieldVisibilityKind>,
+    /// Whether to emit diagnostics or not.
+    #[arg(long, requires = "experimental")]
+    emit_diagnostics: bool,
     /// Enables experimental features.
     #[arg(long)]
     experimental: bool,
@@ -449,7 +458,6 @@ where
         rust_target,
         use_core,
         conservative_inline_namespaces,
-        use_msvc_mangling: _,
         allowlist_function,
         generate_inline_functions,
         allowlist_type,
@@ -458,10 +466,9 @@ where
         verbose,
         dump_preprocessed_input,
         no_record_matches,
-        size_t_is_usize: _,
         no_size_t_is_usize,
         no_rustfmt_bindings,
-        rustfmt_bindings: _,
+        formatter,
         rustfmt_configuration_file,
         no_partialeq,
         no_copy,
@@ -474,6 +481,7 @@ where
         wasm_import_module_name,
         dynamic_loading,
         dynamic_link_require_all,
+        prefix_link_name,
         respect_cxx_access_specs,
         translate_enum_integer_types,
         c_naming,
@@ -490,6 +498,8 @@ where
         wrap_static_fns,
         wrap_static_fns_path,
         wrap_static_fns_suffix,
+        default_visibility,
+        emit_diagnostics,
         experimental: _,
         version,
         clang_args,
@@ -498,7 +508,7 @@ where
     if version {
         println!(
             "bindgen {}",
-            option_env!("CARGO_PKG_VERSION").unwrap_or("unknown")
+            Some("0.65.1").unwrap_or("unknown")
         );
         if verbose {
             println!("Clang: {}", bindgen::clang_version().full);
@@ -825,18 +835,15 @@ where
     }
 
     if no_rustfmt_bindings {
-        builder = builder.rustfmt_bindings(false);
+        builder = builder.formatter(Formatter::None);
+    }
+
+    if let Some(formatter) = formatter {
+        builder = builder.formatter(formatter);
     }
 
     if let Some(path_str) = rustfmt_configuration_file {
         let path = PathBuf::from(path_str);
-
-        if no_rustfmt_bindings {
-            return Err(Error::new(
-                ErrorKind::Other,
-                "Cannot supply both --rustfmt-configuration-file and --no-rustfmt-bindings",
-            ));
-        }
 
         if !path.is_absolute() {
             return Err(Error::new(
@@ -885,6 +892,28 @@ where
 
     if dynamic_link_require_all {
         builder = builder.dynamic_link_require_all(true);
+    }
+
+    if let Some(prefix_link_name) = prefix_link_name {
+        #[derive(Debug)]
+        struct PrefixLinkNameCallback {
+            prefix: String,
+        }
+
+        impl bindgen::callbacks::ParseCallbacks for PrefixLinkNameCallback {
+            fn generated_link_name_override(
+                &self,
+                item_info: bindgen::callbacks::ItemInfo<'_>,
+            ) -> Option<String> {
+                let mut prefix = self.prefix.clone();
+                prefix.push_str(item_info.name);
+                Some(prefix)
+            }
+        }
+
+        builder = builder.parse_callbacks(Box::new(PrefixLinkNameCallback {
+            prefix: prefix_link_name,
+        }))
     }
 
     if respect_cxx_access_specs {
@@ -972,12 +1001,25 @@ where
         }
     }
 
-    for (custom_derives, kind) in [
-        (with_derive_custom, None),
-        (with_derive_custom_struct, Some(TypeKind::Struct)),
-        (with_derive_custom_enum, Some(TypeKind::Enum)),
-        (with_derive_custom_union, Some(TypeKind::Union)),
+    for (custom_derives, kind, name) in [
+        (with_derive_custom, None, "--with-derive-custom"),
+        (
+            with_derive_custom_struct,
+            Some(TypeKind::Struct),
+            "--with-derive-custom-struct",
+        ),
+        (
+            with_derive_custom_enum,
+            Some(TypeKind::Enum),
+            "--with-derive-custom-enum",
+        ),
+        (
+            with_derive_custom_union,
+            Some(TypeKind::Union),
+            "--with-derive-custom-union",
+        ),
     ] {
+        let name = emit_diagnostics.then_some(name);
         for custom_derive in custom_derives {
             let (regex, derives) = custom_derive
                 .rsplit_once('=')
@@ -986,7 +1028,7 @@ where
 
             let mut regex_set = RegexSet::new();
             regex_set.insert(regex);
-            regex_set.build(false);
+            regex_set.build_with_diagnostics(false, name);
 
             builder = builder.parse_callbacks(Box::new(CustomDeriveCallback {
                 derives,
@@ -1006,6 +1048,14 @@ where
 
     if let Some(suffix) = wrap_static_fns_suffix {
         builder = builder.wrap_static_fns_suffix(suffix);
+    }
+
+    if let Some(visibility) = default_visibility {
+        builder = builder.default_visibility(visibility);
+    }
+
+    if emit_diagnostics {
+        builder = builder.emit_diagnostics();
     }
 
     Ok((builder, output, verbose))
