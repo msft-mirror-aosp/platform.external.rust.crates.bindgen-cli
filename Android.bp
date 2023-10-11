@@ -41,8 +41,6 @@ rust_binary_host {
         "libshlex",
     ],
     compile_multilib: "first",
-    product_available: true,
-    vendor_available: true,
 }
 
 rust_library_host {
