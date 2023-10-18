@@ -1,5 +1,0 @@
-{
-  "add-toplevel-block": "cargo2android-extra-module.bp",
-  "host-first-multilib": true,
-  "run": true
-}
